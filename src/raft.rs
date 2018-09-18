@@ -1824,6 +1824,17 @@ impl<T: Storage> Raft<T> {
         self.prs().voter_ids().contains(&self.id)
     }
 
+
+    /// Begin the process of changing the cluster's peer configuration to a new one.
+    ///
+    /// This should only be called on the leader.
+    pub fn set_nodes(&mut self, voters: impl IntoIterator<Item=u64>, learners: impl IntoIterator<Item=u64>) -> Result<()> {
+        let config = Configuration::from((voters, learners));
+        config.valid()?;
+        self.mut_prs().transition_to_config(config)?;
+        Ok(())
+    }
+
     fn add_voter_or_learner(&mut self, id: u64, learner: bool) {
         debug!(
             "Adding node (learner: {}) with ID {} to peers.",
@@ -1863,13 +1874,6 @@ impl<T: Storage> Raft<T> {
         // Otherwise, check_quorum may cause us to step down if it is invoked
         // before the added node has a chance to commuicate with us.
         self.mut_prs().get_mut(id).unwrap().recent_active = true;
-    }
-
-    /// Begin the process of changing the cluster's peer configuration to a new one.
-    ///
-    /// This should only be called on the leader.
-    pub fn set_nodes(&mut self, config: impl Into<Configuration>) -> Result<()> {
-        self.mut_prs().begin_joint(config.into())
     }
 
     /// Adds a new node to the cluster.
