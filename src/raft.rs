@@ -1431,7 +1431,24 @@ impl<T: Storage> Raft<T> {
                 }
                 return Ok(());
             }
-            _ => {}
+            MessageType::MsgBeginSetNodes | MessageType::MsgCommitSetNodes => {
+                unreachable!("The leader recieving a BeginSetNodes or CommitSetNodes message implies there are two leaders.");
+            }
+            MessageType::MsgHup
+            | MessageType::MsgAppend
+            | MessageType::MsgAppendResponse
+            | MessageType::MsgRequestVote
+            | MessageType::MsgSnapshot
+            | MessageType::MsgRequestVoteResponse
+            | MessageType::MsgHeartbeat
+            | MessageType::MsgHeartbeatResponse
+            | MessageType::MsgUnreachable
+            | MessageType::MsgSnapStatus
+            | MessageType::MsgTransferLeader
+            | MessageType::MsgTimeoutNow
+            | MessageType::MsgReadIndexResp
+            | MessageType::MsgRequestPreVote
+            | MessageType::MsgRequestPreVoteResponse => {}
         }
 
         let mut send_append = false;
@@ -1472,7 +1489,7 @@ impl<T: Storage> Raft<T> {
 
     // step_candidate is shared by state Candidate and PreCandidate; the difference is
     // whether they respond to MsgRequestVote or MsgRequestPreVote.
-    fn step_candidate(&mut self, m: Message) -> Result<()> {
+    fn step_candidate(&mut self, mut m: Message) -> Result<()> {
         match m.get_msg_type() {
             MessageType::MsgPropose => {
                 info!(
@@ -1545,7 +1562,25 @@ impl<T: Storage> Raft<T> {
                 self.state,
                 m.get_from()
             ),
-            _ => {}
+            MessageType::MsgBeginSetNodes => {
+                let configuration = m.take_configuration();
+                self.mut_prs().begin_config_transition(configuration)?;
+            }
+            MessageType::MsgCommitSetNodes => {
+                self.mut_prs().commit_config_transition()?;
+            }
+            MessageType::MsgHup
+            | MessageType::MsgBeat
+            | MessageType::MsgAppendResponse
+            | MessageType::MsgRequestVote
+            | MessageType::MsgHeartbeatResponse
+            | MessageType::MsgUnreachable
+            | MessageType::MsgSnapStatus
+            | MessageType::MsgCheckQuorum
+            | MessageType::MsgTransferLeader
+            | MessageType::MsgReadIndex
+            | MessageType::MsgReadIndexResp
+            | MessageType::MsgRequestPreVote => {}
         }
         Ok(())
     }
@@ -1637,7 +1672,24 @@ impl<T: Storage> Raft<T> {
                 };
                 self.read_states.push(rs);
             }
-            _ => {}
+            MessageType::MsgBeginSetNodes => {
+                let configuration = m.take_configuration();
+                self.mut_prs().begin_config_transition(configuration)?;
+            }
+            MessageType::MsgCommitSetNodes => {
+                self.mut_prs().commit_config_transition()?;
+            }
+            MessageType::MsgHup
+            | MessageType::MsgBeat
+            | MessageType::MsgAppendResponse
+            | MessageType::MsgRequestVote
+            | MessageType::MsgRequestVoteResponse
+            | MessageType::MsgHeartbeatResponse
+            | MessageType::MsgUnreachable
+            | MessageType::MsgSnapStatus
+            | MessageType::MsgCheckQuorum
+            | MessageType::MsgRequestPreVote
+            | MessageType::MsgRequestPreVoteResponse => {}
         }
         Ok(())
     }
