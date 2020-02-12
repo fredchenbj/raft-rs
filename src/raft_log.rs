@@ -260,17 +260,19 @@ impl<T: Storage> RaftLog<T> {
     /// # Panics
     ///
     /// Panics if the value passed in is not new or known.
-    pub fn applied_to(&mut self, idx: u64) {
+    pub fn applied_to(&mut self, idx: u64) -> std::result::Result<String, &'static str> {
         if idx == 0 {
-            return;
+            return Ok("".to_string());
         }
         if self.committed < idx || idx < self.applied {
-            panic!(
+            warn!(
                 "{} applied({}) is out of range [prev_applied({}), committed({})",
                 self.tag, idx, self.applied, self.committed
-            )
+            );
+            return Err("panic");
         }
         self.applied = idx;
+        Ok("".to_string())
     }
 
     /// Returns the last applied index.

@@ -63,6 +63,10 @@ quick_error! {
         NotExists(id: u64, set: &'static str) {
             display("The node {} is not in the {} set.", id, set)
         }
+        /// The region panic
+        RegionPanic {
+            description("raft: region panic")
+        }
     }
 }
 
